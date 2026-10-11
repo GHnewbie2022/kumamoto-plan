@@ -244,6 +244,8 @@ const KATO_WALK='捷徑：出城彩苑走「行幸坂」上坡到二之丸，再
 const CASTLE_WALK='走路約 4 分鐘，其餘是驗票和排隊的預留。加藤神社 → 北口售票處 → 驗票後往天守方向。10/17 週六北口售票 08:45–20:00。';
 /* 地圖起終點另外指定的路段 */
 const MAP_END={};
+/* Google 內嵌地圖選不了時間和路線、會排錯的路段：不內嵌，只留連結 */
+const NO_EMBED=new Set(['airport>sakura']);
 const mapQ=(a,b)=>{const o=MAP_END[a+'>'+b]||{},q=id=>PLACE_Q[id]||getStop(id).name+' 熊本';return[o.from||q(a),o.to||q(b)];};
 const JOSAI_NOTE='逛商店、挑小吃與伴手禮，再找位子坐下補水、上洗手間。午餐若延誤，這段可以縮短。';
 const STOPS={
@@ -276,7 +278,7 @@ const PLACE_Q={hotel:'REF Kumamoto by VESSEL HOTELS 新市街7-2 熊本',airport
 const KIND={spot:'景點',cafe:'咖啡廳',food:'餐廳',rest:'交通・休息'};
 /* 城區坡道、機場巴士這類算不準的路段，沿用原本人工估的時間 */
 const PRESET={
- 'airport>sakura':{mode:'公車',minutes:65,detail:'機場4號乘車處 → 櫻町。含部分候車；通關延誤可能增加時間。'},
+ 'airport>sakura':{mode:'公車',minutes:55,detail:'機場利木津巴士（空港リムジンバス）直達櫻町巴士總站，車程約 42–45 分，¥1,400。10/16 週五晚上的班次：19:30、19:40、19:50、20:00 發車。最晚要搭上 20:00 那班（20:42 到），才趕得上 21:00 的雞山；20:20 那班 21:02 才到，來不及。班次是 10/12 查 Google 地圖的結果，出發前再確認。'},
  'sakura>chicken':{mode:'步行',minutes:15,detail:'拖行李直接前往雞山；依路口與找路狀況調整。'},
  'hall>kato':{mode:'步行',minutes:20,detail:'城區有上坡。採慢走預留；現場開放道路依公告。'},
  'kato>josai':{mode:'步行',minutes:25,detail:'沿城區開放步道前往；道路與入口可能繞行。'},
@@ -339,6 +341,7 @@ function migrate(x){
  if(x.routes){if(x.routes[gone+'>kato']&&!x.routes['josai>kato'])x.routes['josai>kato']=x.routes[gone+'>kato'];for(const k of Object.keys(x.routes))if(k.split('>').includes(gone))delete x.routes[k];}
  if(x.routes&&x.routes['josai>kato']&&/^(小布少爺文章記載)?城彩苑至神社步行約11分鐘/.test(x.routes['josai>kato'].detail||''))x.routes['josai>kato'].detail=KATO_WALK;
  if(x.routes&&x.routes['kato>castle']&&/^加藤神社 → 熊本城北口 → 驗票後往天守方向/.test(x.routes['kato>castle'].detail||''))x.routes['kato>castle'].detail=CASTLE_WALK;
+ {const r=x.routes&&x.routes['airport>sakura'];if(r&&r.minutes===undefined&&!r.detail)delete x.routes['airport>sakura'];}
  if(x.edits)delete x.edits[gone];if(x.custom)delete x.custom[gone];return x;
 }
 function valid(x){
@@ -425,12 +428,12 @@ function legHTML(a,b,r){
   extra+=`<div class="sum">${t.w1?`<span>步行 ${t.w1}</span>`:''}<span>候車 ${t.wait}</span><span class="ride">乘車 ${t.ride}</span>${t.w2?`<span>步行 ${t.w2}</span>`:''}${calc}</div>`;
   extra+=`<div class="chain">${t.lines.map(l=>`<span class="ln ${l}">${l}</span>`).join('')}${t.names.map((n,i)=>i===0||i===t.names.length-1||(t.transfer&&n==='辛島町')?`<b>${esc(n)}</b>`:esc(n)).join(' › ')}（${t.names.length-1} 站，軌道 ${(t.meters/1000).toFixed(1)} 公里）</div>`;
  }
- const gmEarly=EMBED&&!t&&(r.mode==='步行'||r.mode==='公車')&&r.minutes>0;
+ const gmEarly=EMBED&&!t&&!NO_EMBED.has(key)&&(r.mode==='步行'||r.mode==='公車')&&r.minutes>0;
  const acts=[];
  if(!gmEarly&&(r.minutes||r.mode!=='原地停留'))acts.push(`<a class="maps-link" href="${esc(gmapDir(a,b,r))}" target="_blank" rel="noopener">Google 地圖看${r.mode==='步行'?'走法':'班次'} ↗</a>`);
  if(r.source==='auto'&&r.mode==='電車'&&r.walk!==null)acts.push(`<button class="maps-link" type="button" data-pick="步行">改走路 · ${r.walk} 分</button>`);
  if(r.source==='auto'&&r.mode==='步行'&&r.auto)acts.push(`<button class="maps-link" type="button" data-pick="電車">改搭電車 · ${r.auto.total} 分</button>`);
- const shut=shutMaps.has(key),gm=EMBED&&(t?gmOn.has(key):(r.mode==='步行'||r.mode==='公車')&&r.minutes>0);
+ const shut=shutMaps.has(key),gm=EMBED&&!NO_EMBED.has(key)&&(t?gmOn.has(key):(r.mode==='步行'||r.mode==='公車')&&r.minutes>0);
  const frame=()=>`<iframe class="route-map-frame" src="${esc(gmapEmbed(a,b,r))}" title="Google 地圖路線" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><p class="map-note">${r.mode==='步行'?'Google 地圖的步行路線。':'Google 會自己挑交通方式，有時會選成走路；時間以上方自算為準。'}地圖上的時間不會自動帶回行程。</p>`;
  return `<div class="route-block" data-a="${esc(a)}" data-b="${esc(b)}">
  <button class="route" type="button" data-leg><span class="route-icon">↗</span><span><strong>${head}</strong><small>${esc(r.detail)}</small></span><span class="edit-mark">✎</span></button>
