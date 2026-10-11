@@ -417,7 +417,7 @@ function card(id,e){
 function legHTML(a,b,r){
  const key=a+'>'+b,t=r.mode==='電車'?r.tram:null;
  const src=r.source==='auto'?(r.mode==='電車'||r.mode==='步行'?'（自動選最快）':'（估算）'):r.source==='preset'?'（人工估算）':'';
- const head=r.mode==='原地停留'&&!r.minutes?'原地停留':`${esc(r.mode)} · ${r.minutes} 分鐘<em>${src}</em>`;
+ const head=r.mode==='原地停留'&&!r.minutes?'原地停留':`${['步行','電車','公車'].includes(r.mode)?'移動：':esc(r.mode)+' · '}${r.minutes} 分鐘<em>${src}</em>`;
  let extra='';
  if(t){
   const calc=t.total!==r.minutes?`<em>＝自算 ${t.total} 分，這裡預留 ${r.minutes} 分</em>`:'';
