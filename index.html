@@ -186,6 +186,7 @@ body.dragging .route-block{opacity:.45}
       <label>放在哪一天<select id="e-day" name="day"></select></label>
     </div>
     <p class="help" id="e-timehelp"></p>
+    <label id="e-qwrap">地圖上要搜尋的名稱（選填，例如店家的日文名加地址；留空就用地點名稱）<input id="e-q" name="q" maxlength="120"></label>
     <label id="e-stwrap">最近的市電站（地點沒有座標時用來算交通）<select id="e-station" name="station"></select></label>
     <label>備註<textarea id="e-note" name="note" maxlength="600"></textarea></label>
     <div class="end">
@@ -246,7 +247,7 @@ const CASTLE_WALK='走路約 4 分鐘，其餘是驗票和排隊的預留。加�
 const MAP_END={};
 /* Google 內嵌地圖選不了時間和路線、會排錯的路段：不內嵌，只留連結 */
 const NO_EMBED=new Set(['airport>sakura']);
-const mapQ=(a,b)=>{const o=MAP_END[a+'>'+b]||{},q=id=>PLACE_Q[id]||getStop(id).name+' 熊本';return[o.from||q(a),o.to||q(b)];};
+const mapQ=(a,b)=>{const o=MAP_END[a+'>'+b]||{},q=id=>PLACE_Q[id]||getStop(id).q||getStop(id).name+' 熊本';return[o.from||q(a),o.to||q(b)];};
 const JOSAI_NOTE='逛商店、挑小吃與伴手禮，再找位子坐下補水、上洗手間。午餐若延誤，這段可以縮短。';
 const STOPS={
  hotel:{name:'REF 熊本飯店',jp:'REF Kumamoto by VESSEL HOTELS',kind:'rest',duration:0,lat:32.7989,lng:130.7045,note:'新市街7-2。出門與回飯店的起點。'},
@@ -289,7 +290,7 @@ const PRESET={
  'gallery>jiro':{mode:'步行',minutes:15,detail:'經附近橋樑前往新町；兩間咖啡廳之間慢慢走。'}
 };
 /* 預設行程：2026-10-12 定案的版本 */
-const DEFAULT_V2={"v":2,"active":"d1","days":{"d1":["airport","sakura","chicken"],"d2":["hotel","water","katsu","arrow","hall","josai","kato","castle","light","yoka"],"d3":["shopping","kouran","street","gallery","jiro","custom_rest3","dinner"],"d4":["daytour"],"d5":["home"]},"bank":["kotohira","ryumon","lunch"],"starts":{"d1":"19:00","d2":"09:00","d3":"10:00","d4":"09:00","d5":"10:00"},"edits":{"airport":{"name":"熊本機場抵達","duration":40,"desired":"19:00","note":"航班預定19:00抵達；入境與領行李時間有變動。"},"water":{"name":"水前寺成趣園・出水神社","duration":60,"desired":"","note":"庭園與神社一起參觀，留時間坐下休息。一般入園¥500；最晚入園16:30。"},"katsu":{"name":"勝烈亭 新市街本店","duration":60,"desired":"11:00","note":"午餐炸豬排。姊姊早上先吃超商蛋沙拉吐司；用餐另有候位變數。"},"hotel":{"name":"REF 熊本飯店","duration":0,"note":"新市街7-2。出門與回飯店的起點。","desired":""},"josai":{"duration":60,"desired":"14:00","note":"逛商店、挑小吃與伴手禮，再找位子坐下補水、上洗手間。午餐若延誤，這段可以縮短。","name":"櫻之馬場 城彩苑"},"kato":{"duration":30,"desired":"15:30","note":"參拜、拍熊本城景與看繪馬，保留30分鐘。之後接續北口入城，避免返回城彩苑；步道依現場指標與開放情況。"},"castle":{"duration":90,"desired":"16:30","note":"10/17週六從北口入城。16:30是把排隊算進去的時間，隊伍短就提早進去；參觀天守、展覽與城內休息到18:00，接續城あかり。活動期間開園至21:00，最晚入園20:00；當天依公告。"},"hall":{"name":"熊本市公所 展望台","duration":30,"note":"免費看城景。週末從一樓南側入口，搭直達電梯。","desired":"13:15"},"arrow":{"name":"Coffee Arrow 珈琲アロー","duration":45,"note":"姊姊重點。以咖啡為主，非咖啡飲品未確認。當天營業狀況需再確認。","desired":"12:15"},"street":{"desired":"13:00","duration":25},"gallery":{"desired":"13:30","duration":60},"jiro":{"desired":"15:00","duration":60},"shopping":{"desired":"","duration":45,"note":"早上先逛一圈，鶴屋地下樓看伴手禮。想買的東西可以先記下來，傍晚回飯店前再買，就不用提著逛一整天。"},"dinner":{"desired":"18:00","duration":90},"kouran":{"duration":90,"desired":"11:00"},"custom_rest3":{"desired":"16:30"}},"routes":{"hotel>water":{"mode":"電車","minutes":30,"detail":"辛島町 → 水前寺公園，往健軍町方向；含兩端步行與候車。"},"water>katsu":{"mode":"電車","minutes":30,"detail":"水前寺公園 → 辛島町，往田崎橋／上熊本方向；下車步行到勝烈亭。"},"kato>castle":{"mode":"步行","detail":"走路約 4 分鐘，其餘是驗票和排隊的預留。加藤神社 → 北口售票處 → 驗票後往天守方向。10/17 週六北口售票 08:45–20:00。"},"katsu>hall":{"mode":"步行"},"josai>kato":{"mode":"步行","minutes":20,"detail":"捷徑：出城彩苑走「行幸坂」上坡到二之丸，再往北到加藤神社，約 11 分鐘。下面的 Google 地圖不會排這條路，會繞東側走 19 分鐘。行幸坂禁止車輛、人行道可以走，但 2026 年 7 月地震後有沒有開放還沒確認，到坡道入口看告示。如果封閉：照 Google 的路線走，或搭免費接駁車到二之丸停車場再步行（9:00–17:00，約 10–15 分一班）。預留 20 分鐘，兩種走法都夠。"}},"custom":{"custom_rest3":{"name":"回飯店休息／下通補買伴手禮","jp":"REF 熊本飯店・下通","kind":"rest","duration":75,"station":"辛島町","note":"晚餐前的自由時間。可以回飯店放東西休息，或回下通、鶴屋把早上看好的伴手禮買齊。"}}};
+const DEFAULT_V2={"v":2,"active":"d1","days":{"d1":["airport","sakura","chicken"],"d2":["hotel","water","katsu","arrow","hall","josai","kato","castle","light","yoka"],"d3":["shopping","kouran","street","gallery","jiro","custom_rest3","dinner"],"d4":["daytour"],"d5":["home"]},"bank":["kotohira","ryumon","lunch"],"starts":{"d1":"19:00","d2":"09:00","d3":"10:00","d4":"09:00","d5":"10:00"},"edits":{"airport":{"name":"熊本機場抵達","duration":40,"desired":"19:00","note":"航班預定19:00抵達；入境與領行李時間有變動。"},"water":{"name":"水前寺成趣園・出水神社","duration":60,"desired":"","note":"庭園與神社一起參觀，留時間坐下休息。一般入園¥500；最晚入園16:30。"},"katsu":{"name":"勝烈亭 新市街本店","duration":60,"desired":"11:00","note":"午餐炸豬排。姊姊早上先吃超商蛋沙拉吐司；用餐另有候位變數。"},"hotel":{"name":"REF 熊本飯店","duration":0,"note":"新市街7-2。出門與回飯店的起點。","desired":""},"josai":{"duration":60,"desired":"14:00","note":"逛商店、挑小吃與伴手禮，再找位子坐下補水、上洗手間。午餐若延誤，這段可以縮短。","name":"櫻之馬場 城彩苑"},"kato":{"duration":30,"desired":"15:30","note":"參拜、拍熊本城景與看繪馬，保留30分鐘。之後接續北口入城，避免返回城彩苑；步道依現場指標與開放情況。"},"castle":{"duration":90,"desired":"16:30","note":"10/17週六從北口入城。16:30是把排隊算進去的時間，隊伍短就提早進去；參觀天守、展覽與城內休息到18:00，接續城あかり。活動期間開園至21:00，最晚入園20:00；當天依公告。"},"hall":{"name":"熊本市公所 展望台","duration":30,"note":"免費看城景。週末從一樓南側入口，搭直達電梯。","desired":"13:15"},"arrow":{"name":"Coffee Arrow 珈琲アロー","duration":45,"note":"姊姊重點。以咖啡為主，非咖啡飲品未確認。當天營業狀況需再確認。","desired":"12:15"},"street":{"desired":"13:00","duration":25},"gallery":{"desired":"13:30","duration":60},"jiro":{"desired":"15:00","duration":60},"shopping":{"desired":"","duration":45,"note":"早上先逛一圈，鶴屋地下樓看伴手禮。想買的東西可以先記下來，傍晚回飯店前再買，就不用提著逛一整天。"},"dinner":{"desired":"18:00","duration":90},"kouran":{"duration":90,"desired":"11:00"},"custom_rest3":{"desired":"16:30"}},"routes":{"hotel>water":{"mode":"電車","minutes":30,"detail":"辛島町 → 水前寺公園，往健軍町方向；含兩端步行與候車。"},"water>katsu":{"mode":"電車","minutes":30,"detail":"水前寺公園 → 辛島町，往田崎橋／上熊本方向；下車步行到勝烈亭。"},"kato>castle":{"mode":"步行","detail":"走路約 4 分鐘，其餘是驗票和排隊的預留。加藤神社 → 北口售票處 → 驗票後往天守方向。10/17 週六北口售票 08:45–20:00。"},"katsu>hall":{"mode":"步行"},"josai>kato":{"mode":"步行","minutes":20,"detail":"捷徑：出城彩苑走「行幸坂」上坡到二之丸，再往北到加藤神社，約 11 分鐘。下面的 Google 地圖不會排這條路，會繞東側走 19 分鐘。行幸坂禁止車輛、人行道可以走，但 2026 年 7 月地震後有沒有開放還沒確認，到坡道入口看告示。如果封閉：照 Google 的路線走，或搭免費接駁車到二之丸停車場再步行（9:00–17:00，約 10–15 分一班）。預留 20 分鐘，兩種走法都夠。"}},"custom":{"custom_rest3":{"name":"回飯店休息／下通補買伴手禮","jp":"REF 熊本飯店・下通","kind":"rest","duration":75,"lat":32.7989,"lng":130.7045,"q":"REF Kumamoto by VESSEL HOTELS 新市街7-2 熊本","note":"晚餐前的自由時間。可以回飯店放東西休息，或回下通、鶴屋把早上看好的伴手禮買齊。"}}};
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -342,6 +343,7 @@ function migrate(x){
  if(x.routes&&x.routes['josai>kato']&&/^(小布少爺文章記載)?城彩苑至神社步行約11分鐘/.test(x.routes['josai>kato'].detail||''))x.routes['josai>kato'].detail=KATO_WALK;
  if(x.routes&&x.routes['kato>castle']&&/^加藤神社 → 熊本城北口 → 驗票後往天守方向/.test(x.routes['kato>castle'].detail||''))x.routes['kato>castle'].detail=CASTLE_WALK;
  {const r=x.routes&&x.routes['airport>sakura'];if(r&&r.minutes===undefined&&!r.detail)delete x.routes['airport>sakura'];}
+ {const c=x.custom&&x.custom.custom_rest3;if(c&&!c.q){c.q='REF Kumamoto by VESSEL HOTELS 新市街7-2 熊本';c.lat=32.7989;c.lng=130.7045;delete c.station;}}
  if(x.edits)delete x.edits[gone];if(x.custom)delete x.custom[gone];return x;
 }
 function valid(x){
@@ -402,7 +404,7 @@ function schedule(day){
 }
 
 /* ---------- render ---------- */
-function gmapPlace(id){const s=getStop(id);return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(PLACE_Q[id]||s.name+' 熊本');}
+function gmapPlace(id){const s=getStop(id);return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(PLACE_Q[id]||s.q||s.name+' 熊本');}
 function gmapDir(a,b,r){const[o,d]=mapQ(a,b);const p=new URLSearchParams({api:'1',origin:o,destination:d,travelmode:r.mode==='步行'||r.mode==='原地停留'?'walking':'transit'});return 'https://www.google.com/maps/dir/?'+p;}
 function gmapEmbed(a,b,r){const[o,d]=mapQ(a,b);return 'https://maps.google.com/maps?'+new URLSearchParams({f:'d',saddr:o,daddr:d,dirflg:r.mode==='步行'?'w':'r',output:'embed',hl:'zh-TW'});}
 function card(id,e){
@@ -530,11 +532,11 @@ function openEdit(id){
  $('e-timehelp').textContent=s.booking?'這張卡片已訂位，時間固定。':s.fixed?'這是已知的航班預定時間。':'留空就照前一站和交通自動算'+(en?`（目前算出 ${toTime(en.reach)} 抵達）`:'')+'。填了時間就以你填的為準，到不了會提醒。';
  $('e-day').innerHTML=Object.entries(DAYS).map(([d,m],i)=>`<option value="${d}">第${i+1}天 · ${m[0]}</option>`).join('')+'<option value="bank">口袋備選</option>';$('e-day').value=place;
  const hasXY=Number.isFinite(s.lat);$('e-stwrap').hidden=hasXY;$('e-station').innerHTML='<option value="">不確定</option>'+Object.keys(ST).map(n=>`<option>${esc(n)}</option>`).join('');$('e-station').value=s.station||'';
- $('e-note').value=s.note||'';$('e-del').hidden=!custom;$('dlg-edit').showModal();
+ $('e-qwrap').hidden=!custom;$('e-q').value=s.q||'';$('e-note').value=s.note||'';$('e-del').hidden=!custom;$('dlg-edit').showModal();
 }
 $('f-edit').onsubmit=e=>{e.preventDefault();const s=getStop(editId),o={...(state.edits[editId]||{}),name:$('e-name').value.trim()||s.name,duration:Math.min(720,Math.max(0,Number($('e-dur').value)||0)),note:$('e-note').value};
  if(!s.fixed)o.desired=$('e-time').value;if(!$('e-stwrap').hidden)o.station=$('e-station').value;
- if(state.custom[editId]){state.custom[editId]={...state.custom[editId],...o,kind:$('e-kind').value};}else state.edits[editId]=o;
+ if(state.custom[editId]){state.custom[editId]={...state.custom[editId],...o,kind:$('e-kind').value,q:$('e-q').value.trim()};}else state.edits[editId]=o;
  if($('e-day').value!==locate(editId))moveCard(editId,$('e-day').value);$('dlg-edit').close();commit('已更新這一站');};
 $('e-auto').onclick=()=>{$('e-time').value='';};
 function nudge(step){const l=listFor(locate(editId)),i=l.indexOf(editId),j=i+step;if(j<0||j>=l.length)return;[l[i],l[j]]=[l[j],l[i]];commit(step<0?'已往前移一站':'已往後移一站');}
