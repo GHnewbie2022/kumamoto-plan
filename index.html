@@ -408,11 +408,11 @@ function legHTML(a,b,r){
   extra+=`<div class="sum">${t.w1?`<span>步行 ${t.w1}</span>`:''}<span>候車 ${t.wait}</span><span class="ride">乘車 ${t.ride}</span>${t.w2?`<span>步行 ${t.w2}</span>`:''}${calc}</div>`;
   extra+=`<div class="chain">${t.lines.map(l=>`<span class="ln ${l}">${l}</span>`).join('')}${t.names.map((n,i)=>i===0||i===t.names.length-1||(t.transfer&&n==='辛島町')?`<b>${esc(n)}</b>`:esc(n)).join(' › ')}（${t.names.length-1} 站，軌道 ${(t.meters/1000).toFixed(1)} 公里）</div>`;
  }
+ const gmEarly=EMBED&&!t&&(r.mode==='步行'||r.mode==='公車')&&r.minutes>0;
  const acts=[];
- if(r.minutes||r.mode!=='原地停留')acts.push(`<a class="maps-link" href="${esc(gmapDir(a,b,r))}" target="_blank" rel="noopener">Google 地圖看${r.mode==='步行'?'走法':'班次'} ↗</a>`);
+ if(!gmEarly&&(r.minutes||r.mode!=='原地停留'))acts.push(`<a class="maps-link" href="${esc(gmapDir(a,b,r))}" target="_blank" rel="noopener">Google 地圖看${r.mode==='步行'?'走法':'班次'} ↗</a>`);
  if(r.source==='auto'&&r.mode==='電車'&&r.walk!==null)acts.push(`<button class="maps-link" type="button" data-pick="步行">改走路 · ${r.walk} 分</button>`);
  if(r.source==='auto'&&r.mode==='步行'&&r.auto)acts.push(`<button class="maps-link" type="button" data-pick="電車">改搭電車 · ${r.auto.total} 分</button>`);
- if(r.source==='user')acts.push(`<button class="maps-link" type="button" data-pick="">恢復自動</button>`);
  const shut=shutMaps.has(key),gm=EMBED&&(t?gmOn.has(key):(r.mode==='步行'||r.mode==='公車')&&r.minutes>0);
  const frame=()=>`<iframe class="route-map-frame" src="${esc(gmapEmbed(a,b,r))}" title="Google 地圖路線" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><p class="map-note">${r.mode==='步行'?'Google 地圖的步行路線。':'Google 會自己挑交通方式，有時會選成走路；時間以上方自算為準。'}地圖上的時間不會自動帶回行程。</p>`;
  return `<div class="route-block" data-a="${esc(a)}" data-b="${esc(b)}">
